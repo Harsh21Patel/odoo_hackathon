@@ -1,135 +1,146 @@
 # CoreInventory — MERN Stack Inventory Management System
 
-CoreInventory is a modular **Inventory Management System (IMS)** designed to digitize and streamline stock operations within a business.  
-The system replaces manual registers, spreadsheets, and scattered tracking methods with a **centralized, real-time web application**.
+[![MERN Stack](https://img.shields.io/badge/MERN-Stack-blue?style=flat&logo=mongodb&logoColor=white)](https://mern.io/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-green?style=flat&logo=docker)](https://docker.com)
 
-The platform allows businesses to efficiently manage **products, stock levels, warehouse locations, and inventory operations** from a single dashboard.  
-All inventory movements such as incoming goods, deliveries, transfers, and adjustments are automatically recorded.
+A full-featured, modular **Inventory Management System** built with **MongoDB, Express, React, and Node.js (MERN Stack)**. Manage products, warehouses, receipts, deliveries, stock movements, and more with a modern UI and robust backend API. Includes user authentication, dashboard analytics, and Docker support for easy deployment.
 
-CoreInventory is built using the **MERN Stack**, a modern full-stack JavaScript framework that enables scalable and efficient web application development.
+## ✨ Features
+
+- **User Authentication**: Secure login/register with JWT-based auth middleware.
+- **Products Management**: CRUD operations for inventory items.
+- **Warehouses**: Manage multiple warehouse locations.
+- **Receipts & Deliveries**: Track inbound/outbound stock with detailed pages.
+- **Stock Moves**: Full history of inventory movements.
+- **Dashboard**: Overview analytics and quick actions.
+- **Responsive UI**: Modern React components with context API and custom hooks.
+- **Dockerized**: One-command setup with `docker-compose`.
+- **Seeding**: Quick DB population with `backend/seed.js`.
+
+## 🛠️ Tech Stack
+
+| Frontend | Backend | Database | DevOps |
+|----------|---------|----------|--------|
+| React.js | Node.js / Express | MongoDB | Docker, Docker Compose |
+| React Context | Mongoose ODM |  | Nginx |
+| Custom Hooks | JWT Auth |  |  |
+| Tailwind CSS / CSS Modules | bcrypt |  |  |
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js (v18+)
+- MongoDB (local or Atlas)
+- Docker (optional, for containerized setup)
+- Yarn or npm
+
+### 1. Clone & Install
+```bash
+git clone <your-repo-url> odoo_hackathon
+cd odoo_hackathon
+
+# Backend
+cd backend
+npm install
+
+# Frontend
+cd ../frontend
+npm install
+```
+
+### 2. Environment Setup
+Copy `.env.example` to `.env` in `backend/` and configure:
+```
+MONGO_URI=mongodb://localhost:27017/coreinventory
+JWT_SECRET=your_jwt_secret
+PORT=5000
+```
+
+### 3. Seed Database (Optional)
+```bash
+cd backend
+npm run seed
+```
+
+### 4. Run Locally
+```bash
+# Terminal 1: Backend
+cd backend
+npm run dev
+
+# Terminal 2: Frontend
+cd frontend
+npm start
+```
+App will be available at `http://localhost:3000`.
+
+### 5. Docker (Recommended)
+```bash
+docker-compose up --build
+```
+Access at `http://localhost:3000`.
+
+## 📁 Project Structure
+
+```
+odoo_hackathon/
+├── backend/
+│   ├── models/     # Mongoose schemas (User, Product, Warehouse, Receipt, Delivery, StockMove)
+│   ├── routes/     # API endpoints (auth, products, receipts, deliveries, warehouses, moves, dashboard)
+│   ├── middleware/ # Auth middleware
+│   ├── server.js   # Express app
+│   └── seed.js     # DB seeder
+├── frontend/
+│   ├── src/
+│   │   ├── pages/      # Dashboard, ProductsPage, ReceiptsPage, DeliveriesPage, etc.
+│   │   ├── components/ # Reusable UI
+│   │   ├── context/    # AuthContext
+│   │   └── utils/      # API client, helpers
+│   └── public/
+├── docker-compose.yml
+└── README.md
+```
+
+## 🌐 API Endpoints
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/auth/login` | User login | - |
+| POST | `/api/auth/register` | User register | - |
+| GET | `/api/products` | List products | ✓ |
+| POST | `/api/products` | Create product | ✓ |
+| GET/POST | `/api/receipts`, `/api/deliveries`, `/api/warehouses`, `/api/moves` | CRUD for entities | ✓ |
+| GET | `/api/dashboard` | Dashboard data | ✓ |
+
+Full docs: Check `backend/routes/*.js`.
+
+## 📸 Screenshots
+
+*(Add screenshots of Dashboard, Products page, etc.)*
+
+## 🧪 Testing
+
+```bash
+# Backend tests (add Jest if needed)
+npm test
+
+# Frontend
+cd frontend && npm test
+```
+
+## 🤝 Contributing
+
+1. Fork the repo.
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit changes (`git commit -m 'Add some AmazingFeature'`).
+4. Push (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request.
+
+## 📄 License
+
+MIT License — feel free to use and modify!
 
 ---
 
-## Technologies Used
+**Built with ❤️ for efficient inventory management. Contributions welcome!**
 
-This project is developed using the **MERN Stack**, which consists of four core technologies used for building full-stack web applications.
-
-The MERN stack includes:
-
-- **MongoDB**
-- **Express.js**
-- **React.js**
-- **Node.js**
-
-These technologies work together to create a complete system consisting of a **database layer, backend API, and interactive frontend interface**.
-
----
-
-## MongoDB
-
-MongoDB is used as the **primary database** for storing inventory and user data.
-
-It manages all data related to the system, including:
-
-- Product information
-- SKU codes
-- Warehouse details
-- Inventory transactions
-- Stock adjustments
-- User account data
-
-MongoDB is a **NoSQL database**, which allows flexible document-based data storage.  
-It is highly scalable and well suited for applications that require dynamic data structures.
-
----
-
-## Express.js
-
-Express.js is used as the **backend framework** for building RESTful APIs.
-
-It handles:
-
-- Server-side routing
-- Request and response handling
-- Middleware processing
-- Inventory business logic
-- Authentication workflows
-
-Express simplifies backend development and allows the system to remain **modular and easy to maintain**.
-
----
-
-## React.js
-
-React.js is used to build the **frontend user interface** of CoreInventory.
-
-React allows the application to use a **component-based architecture**, which improves code reusability and maintainability.
-
-The frontend interface includes:
-
-- Inventory dashboard
-- Product management pages
-- Stock operation screens
-- User profile interface
-- Navigation menus
-
-React enables dynamic rendering and provides a **smooth and responsive user experience**.
-
----
-
-## Node.js
-
-Node.js provides the **runtime environment** for executing JavaScript on the server.
-
-It is responsible for running the backend server and managing communication between the frontend and database.
-
-Node.js handles tasks such as:
-
-- Processing API requests
-- Managing asynchronous operations
-- Handling inventory updates
-- Connecting to the MongoDB database
-
-Its event-driven architecture makes it suitable for **high-performance web applications**.
-
----
-
-## Additional Tools
-
-### Mongoose
-
-Mongoose is used as an **Object Data Modeling (ODM) library** for MongoDB.
-
-It helps developers interact with the database by providing:
-
-- Structured schemas
-- Data validation
-- Query building
-- Model management
-
-Mongoose simplifies database interaction and ensures consistent data structure.
-
----
-
-### JWT Authentication
-
-JSON Web Tokens (JWT) are used to implement **secure user authentication and authorization**.
-
-JWT allows the system to verify users and protect sensitive inventory operations from unauthorized access.
-
----
-
-### Git and GitHub
-
-Git is used for **version control**, and GitHub is used to host the project repository.
-
-These tools allow developers to:
-
-- Track changes in the codebase
-- Collaborate with team members
-- Maintain project history
-- Manage development versions
-
----
-
-By combining these technologies, CoreInventory delivers a **scalable, secure, and efficient inventory management system** capable of handling real-time stock operations for businesses.
