@@ -78,35 +78,12 @@ App will be available at `http://localhost:3000`.
 ```bash
 docker-compose up --build
 ```
-Access at `http://localhost:3000`.
-
-## 📁 Project Structure
-
-```
-odoo_hackathon/
-├── backend/
-│   ├── models/     # Mongoose schemas (User, Product, Warehouse, Receipt, Delivery, StockMove)
-│   ├── routes/     # API endpoints (auth, products, receipts, deliveries, warehouses, moves, dashboard)
-│   ├── middleware/ # Auth middleware
-│   ├── server.js   # Express app
-│   └── seed.js     # DB seeder
-├── frontend/
-│   ├── src/
-│   │   ├── pages/      # Dashboard, ProductsPage, ReceiptsPage, DeliveriesPage, etc.
-│   │   ├── components/ # Reusable UI
-│   │   ├── context/    # AuthContext
-│   │   └── utils/      # API client, helpers
-│   └── public/
-├── docker-compose.yml
-└── README.md
-```
-
 ## 🌐 API Endpoints
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| POST | `/api/auth/login` | User login | - |
-| POST | `/api/auth/register` | User register | - |
+| POST | `/api/auth/login` | User login | ✓ |
+| POST | `/api/auth/register` | User register | ✓ |
 | GET | `/api/products` | List products | ✓ |
 | POST | `/api/products` | Create product | ✓ |
 | GET/POST | `/api/receipts`, `/api/deliveries`, `/api/warehouses`, `/api/moves` | CRUD for entities | ✓ |
@@ -127,14 +104,6 @@ npm test
 # Frontend
 cd frontend && npm test
 ```
-
-## 🤝 Contributing
-
-1. Fork the repo.
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`).
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`).
-4. Push (`git push origin feature/AmazingFeature`).
-5. Open a Pull Request.
 
 ## 📄 License
 
