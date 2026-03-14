@@ -1,12 +1,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import useModalOpen from '../hooks/useModalOpen';
 
 const UOM_OPTIONS = ['pcs','kg','ltr','mtr','box','set','pkt'];
 const EMPTY_FORM = { name:'', sku:'', category:'', uom:'pcs', description:'', unitCost:'', reorderLevel:10, initialStock:'', warehouseId:'' };
 
 export default function ProductsPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';  // ← RBAC check
+
   const [products, setProducts] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -78,7 +82,10 @@ export default function ProductsPage() {
           <h1 className="page-title">Products</h1>
           <p className="page-subtitle">{products.length} active SKUs in inventory</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}>+ Add Product</button>
+        {/* Only admin sees + Add Product */}
+        {isAdmin && (
+          <button className="btn btn-primary" onClick={openCreate}>+ Add Product</button>
+        )}
       </div>
 
       <div className="filters-bar">
@@ -100,7 +107,14 @@ export default function ProductsPage() {
          products.length === 0 ? <div className="empty-state"><div className="empty-icon">◫</div><p>No products found.</p></div> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>UoM</th><th>Total Stock</th><th>Reorder Level</th><th>Status</th><th></th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Product</th><th>SKU</th><th>Category</th><th>UoM</th>
+                  <th>Total Stock</th><th>Reorder Level</th><th>Status</th>
+                  {/* Only show actions column to admin */}
+                  {isAdmin && <th></th>}
+                </tr>
+              </thead>
               <tbody>
                 {products.map(p => {
                   const status = p.totalStock === 0 ? 'out' : p.totalStock <= p.reorderLevel ? 'low' : 'ok';
@@ -117,12 +131,15 @@ export default function ProductsPage() {
                         {status === 'low' && <span className="chip chip-warning">Low Stock</span>}
                         {status === 'ok' && <span className="chip chip-success">In Stock</span>}
                       </td>
-                      <td>
-                        <div style={{display:'flex', gap:6}}>
-                          <button className="btn btn-secondary btn-sm" onClick={() => openEdit(p)}>Edit</button>
-                          <button className="btn btn-secondary btn-sm" style={{color:'var(--danger)'}} onClick={() => handleDelete(p._id)}>Delete</button>
-                        </div>
-                      </td>
+                      {/* Edit/Delete only for admin */}
+                      {isAdmin && (
+                        <td>
+                          <div style={{display:'flex', gap:6}}>
+                            <button className="btn btn-secondary btn-sm" onClick={() => openEdit(p)}>Edit</button>
+                            <button className="btn btn-secondary btn-sm" style={{color:'var(--danger)'}} onClick={() => handleDelete(p._id)}>Delete</button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -132,7 +149,8 @@ export default function ProductsPage() {
         )}
       </div>
 
-      {showModal && (
+      {/* Modal — only admin can open this anyway */}
+      {showModal && isAdmin && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal">
             <div className="modal-header">

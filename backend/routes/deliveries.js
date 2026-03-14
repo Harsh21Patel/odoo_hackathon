@@ -3,8 +3,9 @@ const router = express.Router();
 const Delivery = require('../models/Delivery');
 const Product = require('../models/Product');
 const StockMove = require('../models/StockMove');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 
+// All roles: view deliveries
 router.get('/', protect, async (req, res) => {
   try {
     const { status, warehouse, search, page = 1, limit = 20 } = req.query;
@@ -24,6 +25,7 @@ router.get('/', protect, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
+// All roles: view single delivery
 router.get('/:id', protect, async (req, res) => {
   try {
     const delivery = await Delivery.findById(req.params.id)
@@ -36,7 +38,8 @@ router.get('/:id', protect, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-router.post('/', protect, async (req, res) => {
+// Admin only: create delivery
+router.post('/', protect, authorize('admin'), async (req, res) => {
   try {
     const { customer, contact, deliveryAddress, operationType, warehouse, location, scheduledDate, lines, notes } = req.body;
     const delivery = await Delivery.create({
@@ -48,7 +51,8 @@ router.post('/', protect, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-router.put('/:id', protect, async (req, res) => {
+// Admin only: edit delivery
+router.put('/:id', protect, authorize('admin'), async (req, res) => {
   try {
     const delivery = await Delivery.findById(req.params.id);
     if (!delivery) return res.status(404).json({ message: 'Delivery not found' });
@@ -59,8 +63,8 @@ router.put('/:id', protect, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// Validate delivery → decrease stock
-router.post('/:id/validate', protect, async (req, res) => {
+// Admin only: validate delivery → decrease stock
+router.post('/:id/validate', protect, authorize('admin'), async (req, res) => {
   try {
     const delivery = await Delivery.findById(req.params.id).populate('lines.product');
     if (!delivery) return res.status(404).json({ message: 'Delivery not found' });
@@ -100,7 +104,8 @@ router.post('/:id/validate', protect, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-router.delete('/:id', protect, async (req, res) => {
+// Admin only: cancel delivery
+router.delete('/:id', protect, authorize('admin'), async (req, res) => {
   try {
     const delivery = await Delivery.findById(req.params.id);
     if (!delivery) return res.status(404).json({ message: 'Delivery not found' });

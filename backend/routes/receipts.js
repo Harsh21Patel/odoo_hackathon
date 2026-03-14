@@ -3,8 +3,9 @@ const router = express.Router();
 const Receipt = require('../models/Receipt');
 const Product = require('../models/Product');
 const StockMove = require('../models/StockMove');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 
+// All roles: view receipts
 router.get('/', protect, async (req, res) => {
   try {
     const { status, warehouse, search, page = 1, limit = 20 } = req.query;
@@ -24,6 +25,7 @@ router.get('/', protect, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
+// All roles: view single receipt
 router.get('/:id', protect, async (req, res) => {
   try {
     const receipt = await Receipt.findById(req.params.id)
@@ -36,7 +38,8 @@ router.get('/:id', protect, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-router.post('/', protect, async (req, res) => {
+// Admin only: create receipt
+router.post('/', protect, authorize('admin'), async (req, res) => {
   try {
     const { supplier, contact, warehouse, location, scheduledDate, lines, notes } = req.body;
     const receipt = await Receipt.create({ supplier, contact, warehouse, location, scheduledDate, lines, notes, createdBy: req.user._id, status: 'Draft' });
@@ -44,7 +47,8 @@ router.post('/', protect, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-router.put('/:id', protect, async (req, res) => {
+// Admin only: edit receipt
+router.put('/:id', protect, authorize('admin'), async (req, res) => {
   try {
     const receipt = await Receipt.findById(req.params.id);
     if (!receipt) return res.status(404).json({ message: 'Receipt not found' });
@@ -55,8 +59,8 @@ router.put('/:id', protect, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// Validate receipt → increase stock
-router.post('/:id/validate', protect, async (req, res) => {
+// Admin only: validate receipt → increase stock
+router.post('/:id/validate', protect, authorize('admin'), async (req, res) => {
   try {
     const receipt = await Receipt.findById(req.params.id).populate('lines.product');
     if (!receipt) return res.status(404).json({ message: 'Receipt not found' });
@@ -98,7 +102,8 @@ router.post('/:id/validate', protect, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-router.delete('/:id', protect, async (req, res) => {
+// Admin only: cancel receipt
+router.delete('/:id', protect, authorize('admin'), async (req, res) => {
   try {
     const receipt = await Receipt.findById(req.params.id);
     if (!receipt) return res.status(404).json({ message: 'Receipt not found' });

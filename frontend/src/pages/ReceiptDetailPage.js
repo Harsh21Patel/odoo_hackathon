@@ -43,6 +43,8 @@ export default function ReceiptDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';  // ← RBAC check
+
   const [receipt, setReceipt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
@@ -63,7 +65,6 @@ export default function ReceiptDetailPage() {
 
   useEffect(() => { load(); }, [id]);
 
-  // Draft → Ready
   const handleMarkReady = async () => {
     setActing(true);
     try {
@@ -74,7 +75,6 @@ export default function ReceiptDetailPage() {
     finally { setActing(false); }
   };
 
-  // Ready → Done (validate)
   const handleValidate = async () => {
     if (!window.confirm('Validate this receipt? Stock will be increased.')) return;
     setActing(true);
@@ -114,7 +114,6 @@ export default function ReceiptDetailPage() {
         table { width: 100%; border-collapse: collapse; margin-top: 16px; }
         th { text-align: left; font-size: 11px; text-transform: uppercase; color: #9B9890; padding: 8px 12px; border-bottom: 2px solid #E4E1D9; }
         td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #E4E1D9; }
-        .badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; background: #F0FDF4; color: #16A34A; }
         .footer { margin-top: 40px; font-size: 12px; color: #9B9890; border-top: 1px solid #E4E1D9; padding-top: 12px; }
       </style></head><body>
       ${printContent.innerHTML}
@@ -135,15 +134,11 @@ export default function ReceiptDetailPage() {
 
   return (
     <div>
-      {/* Back */}
       <div style={{ marginBottom: 20 }}>
         <Link to="/receipts" className="btn btn-secondary btn-sm">← Back to Receipts</Link>
       </div>
 
-      {/* Header */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px', marginBottom: 20 }}>
-
-        {/* Top row: title + pipeline */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -155,37 +150,40 @@ export default function ReceiptDetailPage() {
           {!isCancelled && <StatusPipeline current={receipt.status} />}
         </div>
 
-        {/* Action buttons */}
-        {!isCancelled && (
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {isDraft && (
-              <button className="btn btn-primary" onClick={handleMarkReady} disabled={acting}>
-                {acting ? 'Processing…' : '✓ Mark as Ready'}
-              </button>
-            )}
-            {isReady && (
-              <button className="btn btn-success" onClick={handleValidate} disabled={acting}>
-                {acting ? 'Validating…' : '✓ Validate'}
-              </button>
-            )}
-            {isDone && (
-              <button className="btn btn-secondary" onClick={handlePrint}>
-                🖨 Print
-              </button>
-            )}
-            {!isDone && (
-              <button className="btn btn-secondary" style={{ color: 'var(--danger)' }} onClick={handleCancel}>
-                ✕ Cancel
-              </button>
-            )}
-          </div>
-        )}
+        {/* Action buttons — admin only for validate & cancel */}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          {isAdmin && !isCancelled && (
+            <>
+              {isDraft && (
+                <button className="btn btn-primary" onClick={handleMarkReady} disabled={acting}>
+                  {acting ? 'Processing…' : '✓ Mark as Ready'}
+                </button>
+              )}
+              {isReady && (
+                <button className="btn btn-success" onClick={handleValidate} disabled={acting}>
+                  {acting ? 'Validating…' : '✓ Validate'}
+                </button>
+              )}
+              {!isDone && (
+                <button className="btn btn-secondary" style={{ color: 'var(--danger)' }} onClick={handleCancel}>
+                  ✕ Cancel
+                </button>
+              )}
+            </>
+          )}
+          {isDone && (
+            <button className="btn btn-secondary" onClick={handlePrint}>🖨 Print</button>
+          )}
+          {/* Show read-only notice to non-admins */}
+          {!isAdmin && !isCancelled && !isDone && (
+            <span style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+              🔒 Only admins can validate or cancel receipts
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Printable area */}
       <div id="receipt-print-area">
-
-        {/* Info fields */}
         <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 32px' }}>
             <div>
@@ -223,7 +221,6 @@ export default function ReceiptDetailPage() {
           )}
         </div>
 
-        {/* Products table */}
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)' }}>
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>Products</span>
@@ -232,10 +229,7 @@ export default function ReceiptDetailPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Product</th>
-                  <th>SKU</th>
-                  <th>UoM</th>
-                  <th>Expected Qty</th>
+                  <th>Product</th><th>SKU</th><th>UoM</th><th>Expected Qty</th>
                   <th>{isDone ? 'Received Qty' : 'Done Qty'}</th>
                   {!isDone && !isCancelled && <th>Current Stock</th>}
                 </tr>
@@ -250,15 +244,18 @@ export default function ReceiptDetailPage() {
                     <td>
                       {isDone || isCancelled ? (
                         <span style={{ fontWeight: 600, color: 'var(--success)' }}>{line.receivedQty}</span>
-                      ) : (
+                      ) : isAdmin ? (
+                        // Admins can edit qty
                         <input
                           className="form-input"
-                          type="number"
-                          min="0"
+                          type="number" min="0"
                           style={{ width: 90 }}
                           value={editQtys[i] ?? line.expectedQty}
                           onChange={e => setEditQtys(prev => ({ ...prev, [i]: e.target.value }))}
                         />
+                      ) : (
+                        // Non-admins see read-only qty
+                        <span style={{ fontWeight: 600 }}>{editQtys[i] ?? line.expectedQty}</span>
                       )}
                     </td>
                     {!isDone && !isCancelled && (
@@ -266,7 +263,6 @@ export default function ReceiptDetailPage() {
                     )}
                   </tr>
                 ))}
-                {/* New Product row hint */}
                 {!isDone && !isCancelled && (
                   <tr>
                     <td colSpan={6} style={{ color: 'var(--text-muted)', fontSize: 13, fontStyle: 'italic', padding: '10px 14px' }}>

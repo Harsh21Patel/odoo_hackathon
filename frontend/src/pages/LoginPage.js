@@ -59,7 +59,8 @@ export default function LoginPage() {
             </button>
           </form>
           <button className="demo-btn" onClick={fillDemo}>Use demo credentials</button>
-          <p className="auth-switch">Don't have an account? <Link to="/register">Create one</Link></p>
+          <p className="auth-switch"><Link to="/forgot-password" style={{float:"left"}}>Forgot password?</Link>
+          <span>Don't have an account? <Link to="/register">Sign up</Link></span></p>
         </div>
       </div>
     </div>

@@ -21,8 +21,7 @@ function StatusPipeline({ current }) {
             padding: '6px 18px',
             background: isActive ? 'var(--text-primary)' : isDone ? 'var(--success-light)' : 'var(--surface-2)',
             color: isActive ? 'white' : isDone ? 'var(--success)' : 'var(--text-muted)',
-            fontWeight: isActive ? 600 : 450,
-            fontSize: 13,
+            fontWeight: isActive ? 600 : 450, fontSize: 13,
             borderRadius: i === 0 ? '99px 0 0 99px' : i === PIPELINE.length - 1 ? '0 99px 99px 0' : 0,
             border: '1px solid',
             borderColor: isActive ? 'var(--text-primary)' : isDone ? 'var(--success)' : 'var(--border)',
@@ -42,6 +41,8 @@ export default function DeliveryDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';  // ← RBAC check
+
   const [delivery, setDelivery] = useState(null);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
@@ -62,7 +63,6 @@ export default function DeliveryDetailPage() {
 
   useEffect(() => { load(); }, [id]);
 
-  // Draft → Waiting
   const handleMarkWaiting = async () => {
     setActing(true);
     try {
@@ -73,7 +73,6 @@ export default function DeliveryDetailPage() {
     finally { setActing(false); }
   };
 
-  // Waiting → Ready
   const handleMarkReady = async () => {
     setActing(true);
     try {
@@ -84,9 +83,7 @@ export default function DeliveryDetailPage() {
     finally { setActing(false); }
   };
 
-  // Ready → Done (validate + stock deduction)
   const handleValidate = async () => {
-    // Check stock availability
     const outOfStock = delivery.lines.filter((l, i) =>
       (l.product?.totalStock ?? 0) < Number(doneQtys[i] ?? l.demandQty)
     );
@@ -126,10 +123,6 @@ export default function DeliveryDetailPage() {
       <style>
         body { font-family: sans-serif; padding: 40px; color: #1A1916; }
         h1 { font-size: 22px; margin-bottom: 4px; }
-        .ref { font-family: monospace; font-size: 15px; color: #2563EB; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-        .field label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #9B9890; display: block; margin-bottom: 3px; }
-        .field span { font-size: 14px; font-weight: 500; }
         table { width: 100%; border-collapse: collapse; margin-top: 16px; }
         th { text-align: left; font-size: 11px; text-transform: uppercase; color: #9B9890; padding: 8px 12px; border-bottom: 2px solid #E4E1D9; }
         td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #E4E1D9; }
@@ -155,12 +148,10 @@ export default function DeliveryDetailPage() {
 
   return (
     <div>
-      {/* Back */}
       <div style={{ marginBottom: 20 }}>
         <Link to="/deliveries" className="btn btn-secondary btn-sm">← Back to Deliveries</Link>
       </div>
 
-      {/* Header card */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -173,38 +164,45 @@ export default function DeliveryDetailPage() {
           {!isCancelled && <StatusPipeline current={delivery.status} />}
         </div>
 
-        {/* Action buttons */}
-        {!isCancelled && (
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {isDraft && (
-              <button className="btn btn-primary" onClick={handleMarkWaiting} disabled={acting}>
-                {acting ? 'Processing…' : '✓ Validate'}
-              </button>
-            )}
-            {isWaiting && (
-              <button className="btn btn-primary" onClick={handleMarkReady} disabled={acting}>
-                {acting ? 'Processing…' : '✓ Validate'}
-              </button>
-            )}
-            {isReady && (
-              <button className="btn btn-success" onClick={handleValidate} disabled={acting}>
-                {acting ? 'Validating…' : '✓ Validate'}
-              </button>
-            )}
-            {isDone && (
-              <button className="btn btn-secondary" onClick={handlePrint}>🖨 Print</button>
-            )}
-            {!isDone && (
-              <button className="btn btn-secondary" style={{ color: 'var(--danger)' }} onClick={handleCancel}>✕ Cancel</button>
-            )}
-          </div>
-        )}
+        {/* Action buttons — admin only for validate & cancel */}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          {isAdmin && !isCancelled && (
+            <>
+              {isDraft && (
+                <button className="btn btn-primary" onClick={handleMarkWaiting} disabled={acting}>
+                  {acting ? 'Processing…' : '✓ Validate'}
+                </button>
+              )}
+              {isWaiting && (
+                <button className="btn btn-primary" onClick={handleMarkReady} disabled={acting}>
+                  {acting ? 'Processing…' : '✓ Validate'}
+                </button>
+              )}
+              {isReady && (
+                <button className="btn btn-success" onClick={handleValidate} disabled={acting}>
+                  {acting ? 'Validating…' : '✓ Validate'}
+                </button>
+              )}
+              {!isDone && (
+                <button className="btn btn-secondary" style={{ color: 'var(--danger)' }} onClick={handleCancel}>
+                  ✕ Cancel
+                </button>
+              )}
+            </>
+          )}
+          {isDone && (
+            <button className="btn btn-secondary" onClick={handlePrint}>🖨 Print</button>
+          )}
+          {/* Read-only notice for non-admins */}
+          {!isAdmin && !isCancelled && !isDone && (
+            <span style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+              🔒 Only admins can validate or cancel deliveries
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Printable content */}
       <div id="delivery-print-area">
-
-        {/* Info fields */}
         <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 32px' }}>
             <div>
@@ -247,7 +245,6 @@ export default function DeliveryDetailPage() {
           )}
         </div>
 
-        {/* Products table */}
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>Products</span>
@@ -261,10 +258,7 @@ export default function DeliveryDetailPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Product</th>
-                  <th>SKU</th>
-                  <th>UoM</th>
-                  <th>Demand Qty</th>
+                  <th>Product</th><th>SKU</th><th>UoM</th><th>Demand Qty</th>
                   <th>{isDone ? 'Delivered Qty' : 'Done Qty'}</th>
                   {!isDone && !isCancelled && <th>Available Stock</th>}
                 </tr>
@@ -286,15 +280,18 @@ export default function DeliveryDetailPage() {
                       <td>
                         {isDone || isCancelled ? (
                           <span style={{ fontWeight: 600, color: 'var(--success)' }}>{line.doneQty}</span>
-                        ) : (
+                        ) : isAdmin ? (
+                          // Admins can edit qty
                           <input
                             className="form-input"
-                            type="number"
-                            min="0"
+                            type="number" min="0"
                             style={{ width: 90, borderColor: isShort ? 'var(--danger)' : undefined }}
                             value={doneQtys[i] ?? line.demandQty}
                             onChange={e => setDoneQtys(prev => ({ ...prev, [i]: e.target.value }))}
                           />
+                        ) : (
+                          // Non-admins see read-only qty
+                          <span style={{ fontWeight: 600 }}>{doneQtys[i] ?? line.demandQty}</span>
                         )}
                       </td>
                       {!isDone && !isCancelled && (
