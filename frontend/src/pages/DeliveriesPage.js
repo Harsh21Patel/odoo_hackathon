@@ -21,11 +21,20 @@ export default function DeliveriesPage() {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   useModalOpen(showModal);
+
   const [form, setForm] = useState({
     customer: '', contact: '', deliveryAddress: '', operationType: 'Outgoing',
     warehouse: '', location: '', scheduledDate: '', notes: '',
     lines: [{ product: '', demandQty: 1, uom: 'pcs' }]
   });
+
+  // ── Get locations for selected warehouse ──────────────────────────────────
+  const selectedWarehouse = warehouses.find(w => w._id === form.warehouse);
+  const warehouseLocations = selectedWarehouse?.locations || [];
+
+  const handleWarehouseChange = (warehouseId) => {
+    setForm(p => ({ ...p, warehouse: warehouseId, location: '' }));
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -84,16 +93,11 @@ export default function DeliveriesPage() {
           <option value="">All Statuses</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        {/* View toggle */}
         <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
           <button onClick={() => setViewMode('list')} title="List view"
-            style={{ padding: '7px 12px', background: viewMode === 'list' ? 'var(--text-primary)' : 'var(--surface)', color: viewMode === 'list' ? 'white' : 'var(--text-secondary)', border: 'none', cursor: 'pointer', fontSize: 14 }}>
-            ☰
-          </button>
+            style={{ padding: '7px 12px', background: viewMode === 'list' ? 'var(--text-primary)' : 'var(--surface)', color: viewMode === 'list' ? 'white' : 'var(--text-secondary)', border: 'none', cursor: 'pointer', fontSize: 14 }}>☰</button>
           <button onClick={() => setViewMode('kanban')} title="Kanban view"
-            style={{ padding: '7px 12px', background: viewMode === 'kanban' ? 'var(--text-primary)' : 'var(--surface)', color: viewMode === 'kanban' ? 'white' : 'var(--text-secondary)', border: 'none', borderLeft: '1px solid var(--border)', cursor: 'pointer', fontSize: 14 }}>
-            ⊞
-          </button>
+            style={{ padding: '7px 12px', background: viewMode === 'kanban' ? 'var(--text-primary)' : 'var(--surface)', color: viewMode === 'kanban' ? 'white' : 'var(--text-secondary)', border: 'none', borderLeft: '1px solid var(--border)', cursor: 'pointer', fontSize: 14 }}>⊞</button>
         </div>
       </div>
 
@@ -102,27 +106,18 @@ export default function DeliveriesPage() {
       ) : deliveries.length === 0 ? (
         <div className="empty-state"><div className="empty-icon">↑</div><p>No delivery orders found.</p></div>
       ) : viewMode === 'list' ? (
-        /* ── LIST VIEW ── */
         <div className="card" style={{ padding: 0 }}>
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Reference</th>
-                  <th>From</th>
-                  <th>To</th>
-                  <th>Contact</th>
-                  <th>Scheduled Date</th>
-                  <th>Status</th>
-                  <th></th>
+                  <th>Reference</th><th>From</th><th>To</th><th>Contact</th><th>Scheduled Date</th><th>Status</th><th></th>
                 </tr>
               </thead>
               <tbody>
                 {deliveries.map(d => (
                   <tr key={d._id}>
-                    <td>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13, color: 'var(--accent)' }}>{d.reference}</span>
-                    </td>
+                    <td><span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13, color: 'var(--accent)' }}>{d.reference}</span></td>
                     <td style={{ fontSize: 13 }}>
                       <div style={{ fontWeight: 450 }}>{d.warehouse?.name}{d.location && <span style={{ color: 'var(--text-muted)' }}> / {d.location}</span>}</div>
                       <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>WH/Stock</div>
@@ -142,7 +137,6 @@ export default function DeliveriesPage() {
           </div>
         </div>
       ) : (
-        /* ── KANBAN VIEW ── */
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 14, alignItems: 'start' }}>
           {kanbanGroups.map(group => (
             <div key={group.status}>
@@ -175,7 +169,7 @@ export default function DeliveriesPage() {
         </div>
       )}
 
-      {/* New Delivery Modal */}
+      {/* ── New Delivery Modal ── */}
       {showModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal modal-lg">
@@ -194,23 +188,59 @@ export default function DeliveriesPage() {
                   <input className="form-input" value={form.contact} onChange={e => setForm(p => ({ ...p, contact: e.target.value }))} placeholder="e.g. Rahul Sharma" />
                 </div>
               </div>
+
               <div className="form-group">
                 <label className="form-label">Delivery Address</label>
                 <input className="form-input" value={form.deliveryAddress} onChange={e => setForm(p => ({ ...p, deliveryAddress: e.target.value }))} placeholder="Full delivery address" />
               </div>
+
               <div className="grid-2">
                 <div className="form-group">
                   <label className="form-label">Dispatch From (Warehouse) *</label>
-                  <select className="form-input form-select" value={form.warehouse} onChange={e => setForm(p => ({ ...p, warehouse: e.target.value }))} required>
+                  <select
+                    className="form-input form-select"
+                    value={form.warehouse}
+                    onChange={e => handleWarehouseChange(e.target.value)}
+                    required
+                  >
                     <option value="">Select warehouse</option>
                     {warehouses.map(w => <option key={w._id} value={w._id}>{w.name}</option>)}
                   </select>
                 </div>
+
                 <div className="form-group">
-                  <label className="form-label">Source Location</label>
-                  <input className="form-input" value={form.location} onChange={e => setForm(p => ({ ...p, location: e.target.value }))} placeholder="e.g. Shelf B" />
+                  <label className="form-label">
+                    Source Location
+                    {warehouseLocations.length === 0 && form.warehouse && (
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400, marginLeft: 6 }}>(no locations defined)</span>
+                    )}
+                  </label>
+                  {/* ── Dropdown if warehouse has locations, else free text ── */}
+                  {warehouseLocations.length > 0 ? (
+                    <select
+                      className="form-input form-select"
+                      value={form.location}
+                      onChange={e => setForm(p => ({ ...p, location: e.target.value }))}
+                    >
+                      <option value="">Select location</option>
+                      {warehouseLocations.map(loc => (
+                        <option key={loc._id} value={loc.name}>
+                          {loc.name} ({loc.shortCode})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      className="form-input"
+                      value={form.location}
+                      onChange={e => setForm(p => ({ ...p, location: e.target.value }))}
+                      placeholder={form.warehouse ? 'Type location name' : 'Select warehouse first'}
+                      disabled={!form.warehouse}
+                    />
+                  )}
                 </div>
               </div>
+
               <div className="grid-2">
                 <div className="form-group">
                   <label className="form-label">Scheduled Date</label>

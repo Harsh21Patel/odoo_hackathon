@@ -38,8 +38,8 @@ router.get('/:id', protect, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// Admin only: create receipt
-router.post('/', protect, authorize('admin'), async (req, res) => {
+// All roles: create receipt
+router.post('/', protect, async (req, res) => {
   try {
     const { supplier, contact, warehouse, location, scheduledDate, lines, notes } = req.body;
     const receipt = await Receipt.create({ supplier, contact, warehouse, location, scheduledDate, lines, notes, createdBy: req.user._id, status: 'Draft' });
@@ -47,8 +47,8 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// Admin only: edit receipt
-router.put('/:id', protect, authorize('admin'), async (req, res) => {
+// All roles: edit receipt (only if not Done)
+router.put('/:id', protect, async (req, res) => {
   try {
     const receipt = await Receipt.findById(req.params.id);
     if (!receipt) return res.status(404).json({ message: 'Receipt not found' });

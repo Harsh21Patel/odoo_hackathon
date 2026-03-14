@@ -24,8 +24,23 @@ export default function MoveHistoryPage() {
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [saving, setSaving] = useState(false);
   useModalOpen(showTransferModal || showAdjustModal);
-  const [tForm, setTForm] = useState({ productId:'', fromWarehouseId:'', fromLocation:'', toWarehouseId:'', toLocation:'', quantity:1, notes:'' });
-  const [aForm, setAForm] = useState({ productId:'', warehouseId:'', location:'', countedQty:0, notes:'' });
+
+  const [tForm, setTForm] = useState({
+    productId:'', fromWarehouseId:'', fromLocation:'',
+    toWarehouseId:'', toLocation:'', quantity:1, notes:''
+  });
+  const [aForm, setAForm] = useState({
+    productId:'', warehouseId:'', location:'', countedQty:0, notes:''
+  });
+
+  // ── Location helpers ──────────────────────────────────────────────────────
+  const fromWarehouse = warehouses.find(w => w._id === tForm.fromWarehouseId);
+  const toWarehouse   = warehouses.find(w => w._id === tForm.toWarehouseId);
+  const adjWarehouse  = warehouses.find(w => w._id === aForm.warehouseId);
+
+  const fromLocations = fromWarehouse?.locations || [];
+  const toLocations   = toWarehouse?.locations   || [];
+  const adjLocations  = adjWarehouse?.locations  || [];
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,26 +89,49 @@ export default function MoveHistoryPage() {
     finally { setSaving(false); }
   };
 
-  // Row color: receipt/transfer/adjustment = green tint, delivery = red tint
   const rowStyle = (moveType) => {
     if (moveType === 'receipt') return { background: '#F0FDF4' };
     if (moveType === 'delivery') return { background: '#FEF2F2' };
     return {};
   };
 
-  // Contact = vendor for receipt, customer for delivery
   const getContact = (m) => m.vendor || m.customer || '—';
-
-  // Status label from move status
   const statusLabel = (m) => m.status || 'Done';
 
-  // Kanban groups by moveType
   const kanbanGroups = MOVE_TYPES.map(t => ({
     type: t,
     items: moves.filter(m => m.moveType === t),
     color: { receipt:'#16A34A', delivery:'#DC2626', transfer:'#0891B2', adjustment:'#D97706' }[t],
     bg:    { receipt:'#F0FDF4', delivery:'#FEF2F2', transfer:'#ECFEFF', adjustment:'#FFFBEB' }[t],
   }));
+
+  // ── Reusable location field ───────────────────────────────────────────────
+  const LocationField = ({ label, locations, value, onChange, disabled, placeholder }) => (
+    <div className="form-group">
+      <label className="form-label">
+        {label}
+        {locations.length === 0 && value !== undefined && !disabled && (
+          <span style={{ fontSize:11, color:'var(--text-muted)', fontWeight:400, marginLeft:6 }}>(free text)</span>
+        )}
+      </label>
+      {locations.length > 0 ? (
+        <select className="form-input form-select" value={value} onChange={onChange} disabled={disabled}>
+          <option value="">Select location</option>
+          {locations.map(loc => (
+            <option key={loc._id} value={loc.name}>{loc.name} ({loc.shortCode})</option>
+          ))}
+        </select>
+      ) : (
+        <input
+          className="form-input"
+          value={value}
+          onChange={onChange}
+          placeholder={disabled ? 'Select warehouse first' : placeholder}
+          disabled={disabled}
+        />
+      )}
+    </div>
+  );
 
   return (
     <div>
@@ -108,7 +146,6 @@ export default function MoveHistoryPage() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="filters-bar">
         <select className="form-input form-select" style={{width:150}} value={filterType} onChange={e => setFilterType(e.target.value)}>
           <option value="">All Types</option>
@@ -129,20 +166,14 @@ export default function MoveHistoryPage() {
         {(filterType || filterWarehouse || dateFrom || dateTo) && (
           <button className="btn btn-secondary btn-sm" onClick={() => { setFilterType(''); setFilterWarehouse(''); setDateFrom(''); setDateTo(''); }}>Clear</button>
         )}
-        {/* View toggle */}
         <div style={{display:'flex', border:'1px solid var(--border)', borderRadius:'var(--radius-sm)', overflow:'hidden', marginLeft:'auto'}}>
           <button onClick={() => setViewMode('list')} title="List view"
-            style={{padding:'7px 12px', background: viewMode==='list' ? 'var(--text-primary)' : 'var(--surface)', color: viewMode==='list' ? 'white' : 'var(--text-secondary)', border:'none', cursor:'pointer', fontSize:14}}>
-            ☰
-          </button>
+            style={{padding:'7px 12px', background: viewMode==='list' ? 'var(--text-primary)' : 'var(--surface)', color: viewMode==='list' ? 'white' : 'var(--text-secondary)', border:'none', cursor:'pointer', fontSize:14}}>☰</button>
           <button onClick={() => setViewMode('kanban')} title="Kanban view"
-            style={{padding:'7px 12px', background: viewMode==='kanban' ? 'var(--text-primary)' : 'var(--surface)', color: viewMode==='kanban' ? 'white' : 'var(--text-secondary)', border:'none', borderLeft:'1px solid var(--border)', cursor:'pointer', fontSize:14}}>
-            ⊞
-          </button>
+            style={{padding:'7px 12px', background: viewMode==='kanban' ? 'var(--text-primary)' : 'var(--surface)', color: viewMode==='kanban' ? 'white' : 'var(--text-secondary)', border:'none', borderLeft:'1px solid var(--border)', cursor:'pointer', fontSize:14}}>⊞</button>
         </div>
       </div>
 
-      {/* Legend */}
       <div style={{display:'flex', gap:16, marginBottom:14}}>
         <div style={{display:'flex', alignItems:'center', gap:6, fontSize:12.5, color:'var(--text-secondary)'}}>
           <div style={{width:12, height:12, borderRadius:3, background:'#bbf7d0'}}></div> Inbound (receipt)
@@ -160,19 +191,12 @@ export default function MoveHistoryPage() {
       ) : moves.length === 0 ? (
         <div className="empty-state"><div className="empty-icon">⇄</div><p>No moves found.</p></div>
       ) : viewMode === 'list' ? (
-        /* ── LIST VIEW ── */
         <div className="card" style={{padding:0}}>
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Reference</th>
-                  <th>Date</th>
-                  <th>Contact</th>
-                  <th>From</th>
-                  <th>To</th>
-                  <th>Quantity</th>
-                  <th>Status</th>
+                  <th>Reference</th><th>Date</th><th>Contact</th><th>From</th><th>To</th><th>Quantity</th><th>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -184,9 +208,7 @@ export default function MoveHistoryPage() {
                       </div>
                       <div style={{fontSize:11, color:'var(--text-muted)', marginTop:2, textTransform:'capitalize'}}>{m.moveType}</div>
                     </td>
-                    <td style={{fontSize:13, color:'var(--text-secondary)', whiteSpace:'nowrap'}}>
-                      {formatDate(m.createdAt)}
-                    </td>
+                    <td style={{fontSize:13, color:'var(--text-secondary)', whiteSpace:'nowrap'}}>{formatDate(m.createdAt)}</td>
                     <td style={{fontSize:13}}>
                       <div style={{fontWeight:450}}>{getContact(m)}</div>
                       <div style={{fontSize:11.5, color:'var(--text-muted)'}}>{m.product?.name}</div>
@@ -203,17 +225,14 @@ export default function MoveHistoryPage() {
                     </td>
                     <td>
                       <span style={{fontWeight:700, color: m.moveType==='receipt' ? 'var(--success)' : m.moveType==='delivery' ? 'var(--danger)' : 'var(--text-primary)'}}>
-                        {m.moveType === 'receipt' ? '+' : m.moveType === 'delivery' ? '-' : ''}{m.quantity}
+                        {m.moveType==='receipt' ? '+' : m.moveType==='delivery' ? '-' : ''}{m.quantity}
                       </span>
                       <span style={{fontSize:12, color:'var(--text-muted)', marginLeft:4}}>{m.uom}</span>
                     </td>
                     <td>
-                      <span style={{
-                        display:'inline-flex', alignItems:'center', padding:'3px 9px',
-                        borderRadius:99, fontSize:11.5, fontWeight:500,
+                      <span style={{display:'inline-flex', alignItems:'center', padding:'3px 9px', borderRadius:99, fontSize:11.5, fontWeight:500,
                         background: m.status==='Done' ? '#F0FDF4' : m.status==='Cancelled' ? '#FEF2F2' : '#F0EEE9',
-                        color: m.status==='Done' ? 'var(--success)' : m.status==='Cancelled' ? 'var(--danger)' : 'var(--text-muted)',
-                      }}>
+                        color: m.status==='Done' ? 'var(--success)' : m.status==='Cancelled' ? 'var(--danger)' : 'var(--text-muted)'}}>
                         {statusLabel(m)}
                       </span>
                     </td>
@@ -224,7 +243,6 @@ export default function MoveHistoryPage() {
           </div>
         </div>
       ) : (
-        /* ── KANBAN VIEW ── */
         <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, alignItems:'start'}}>
           {kanbanGroups.map(group => (
             <div key={group.type}>
@@ -254,7 +272,7 @@ export default function MoveHistoryPage() {
         </div>
       )}
 
-      {/* Transfer Modal */}
+      {/* ── Transfer Modal ── */}
       {showTransferModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowTransferModal(false)}>
           <div className="modal">
@@ -271,32 +289,49 @@ export default function MoveHistoryPage() {
                   {products.map(p => <option key={p._id} value={p._id}>{p.name} (Stock: {p.totalStock} {p.uom})</option>)}
                 </select>
               </div>
+
               <div className="grid-2">
+                {/* From Warehouse */}
                 <div className="form-group">
                   <label className="form-label">From Warehouse *</label>
-                  <select className="form-input form-select" value={tForm.fromWarehouseId} onChange={e => setTForm(p=>({...p,fromWarehouseId:e.target.value}))} required>
+                  <select className="form-input form-select" value={tForm.fromWarehouseId}
+                    onChange={e => setTForm(p=>({...p, fromWarehouseId:e.target.value, fromLocation:''}))} required>
                     <option value="">Select</option>
                     {warehouses.map(w => <option key={w._id} value={w._id}>{w.name}</option>)}
                   </select>
                 </div>
+                {/* To Warehouse */}
                 <div className="form-group">
                   <label className="form-label">To Warehouse *</label>
-                  <select className="form-input form-select" value={tForm.toWarehouseId} onChange={e => setTForm(p=>({...p,toWarehouseId:e.target.value}))} required>
+                  <select className="form-input form-select" value={tForm.toWarehouseId}
+                    onChange={e => setTForm(p=>({...p, toWarehouseId:e.target.value, toLocation:''}))} required>
                     <option value="">Select</option>
                     {warehouses.map(w => <option key={w._id} value={w._id}>{w.name}</option>)}
                   </select>
                 </div>
               </div>
+
               <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">From Location</label>
-                  <input className="form-input" value={tForm.fromLocation} onChange={e => setTForm(p=>({...p,fromLocation:e.target.value}))} placeholder="e.g. Rack A" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">To Location</label>
-                  <input className="form-input" value={tForm.toLocation} onChange={e => setTForm(p=>({...p,toLocation:e.target.value}))} placeholder="e.g. Zone 1" />
-                </div>
+                {/* From Location — dropdown if available */}
+                <LocationField
+                  label="From Location"
+                  locations={fromLocations}
+                  value={tForm.fromLocation}
+                  onChange={e => setTForm(p=>({...p, fromLocation:e.target.value}))}
+                  disabled={!tForm.fromWarehouseId}
+                  placeholder="e.g. Rack A"
+                />
+                {/* To Location — dropdown if available */}
+                <LocationField
+                  label="To Location"
+                  locations={toLocations}
+                  value={tForm.toLocation}
+                  onChange={e => setTForm(p=>({...p, toLocation:e.target.value}))}
+                  disabled={!tForm.toWarehouseId}
+                  placeholder="e.g. Zone 1"
+                />
               </div>
+
               <div className="form-group">
                 <label className="form-label">Quantity *</label>
                 <input className="form-input" type="number" min="1" value={tForm.quantity} onChange={e => setTForm(p=>({...p,quantity:e.target.value}))} required />
@@ -314,7 +349,7 @@ export default function MoveHistoryPage() {
         </div>
       )}
 
-      {/* Adjust Modal */}
+      {/* ── Adjust Modal ── */}
       {showAdjustModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowAdjustModal(false)}>
           <div className="modal">
@@ -332,17 +367,24 @@ export default function MoveHistoryPage() {
                 </select>
               </div>
               <div className="grid-2">
+                {/* Warehouse */}
                 <div className="form-group">
                   <label className="form-label">Warehouse *</label>
-                  <select className="form-input form-select" value={aForm.warehouseId} onChange={e => setAForm(p=>({...p,warehouseId:e.target.value}))} required>
+                  <select className="form-input form-select" value={aForm.warehouseId}
+                    onChange={e => setAForm(p=>({...p, warehouseId:e.target.value, location:''}))} required>
                     <option value="">Select</option>
                     {warehouses.map(w => <option key={w._id} value={w._id}>{w.name}</option>)}
                   </select>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Location</label>
-                  <input className="form-input" value={aForm.location} onChange={e => setAForm(p=>({...p,location:e.target.value}))} placeholder="e.g. Rack A" />
-                </div>
+                {/* Location — dropdown if available */}
+                <LocationField
+                  label="Location"
+                  locations={adjLocations}
+                  value={aForm.location}
+                  onChange={e => setAForm(p=>({...p, location:e.target.value}))}
+                  disabled={!aForm.warehouseId}
+                  placeholder="e.g. Rack A"
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Actual Counted Quantity *</label>

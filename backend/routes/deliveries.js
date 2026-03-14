@@ -38,8 +38,8 @@ router.get('/:id', protect, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// Admin only: create delivery
-router.post('/', protect, authorize('admin'), async (req, res) => {
+// All roles: create delivery
+router.post('/', protect, async (req, res) => {
   try {
     const { customer, contact, deliveryAddress, operationType, warehouse, location, scheduledDate, lines, notes } = req.body;
     const delivery = await Delivery.create({
@@ -51,8 +51,8 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// Admin only: edit delivery
-router.put('/:id', protect, authorize('admin'), async (req, res) => {
+// All roles: edit delivery (only if not Done)
+router.put('/:id', protect, async (req, res) => {
   try {
     const delivery = await Delivery.findById(req.params.id);
     if (!delivery) return res.status(404).json({ message: 'Delivery not found' });

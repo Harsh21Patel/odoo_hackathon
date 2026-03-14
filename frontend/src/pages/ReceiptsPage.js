@@ -16,15 +16,20 @@ export default function ReceiptsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'kanban'
+  const [viewMode, setViewMode] = useState('list');
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   useModalOpen(showModal);
+
   const [form, setForm] = useState({
     supplier:'', contact:'', warehouse:'', location:'',
     scheduledDate:'', notes:'',
     lines:[{ product:'', expectedQty:1, uom:'pcs' }]
   });
+
+  // ── Get locations for selected warehouse ──────────────────────────────────
+  const selectedWarehouse = warehouses.find(w => w._id === form.warehouse);
+  const warehouseLocations = selectedWarehouse?.locations || [];
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,6 +51,11 @@ export default function ReceiptsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Reset location when warehouse changes
+  const handleWarehouseChange = (warehouseId) => {
+    setForm(p => ({ ...p, warehouse: warehouseId, location: '' }));
+  };
+
   const addLine = () => setForm(p => ({ ...p, lines: [...p.lines, { product:'', expectedQty:1, uom:'pcs' }] }));
   const removeLine = (i) => setForm(p => ({ ...p, lines: p.lines.filter((_,idx) => idx !== i) }));
   const updateLine = (i, k, v) => setForm(p => { const lines=[...p.lines]; lines[i]={...lines[i],[k]:v}; return {...p,lines}; });
@@ -62,7 +72,6 @@ export default function ReceiptsPage() {
     finally { setSaving(false); }
   };
 
-  // Group by status for kanban
   const kanbanGroups = STATUSES.map(s => ({
     status: s,
     items: receipts.filter(r => r.status === s),
@@ -87,18 +96,9 @@ export default function ReceiptsPage() {
           <option value="">All Statuses</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        {/* View toggle */}
         <div style={{display:'flex', border:'1px solid var(--border)', borderRadius:'var(--radius-sm)', overflow:'hidden'}}>
-          <button
-            onClick={() => setViewMode('list')}
-            style={{padding:'7px 12px', background: viewMode==='list' ? 'var(--text-primary)' : 'var(--surface)', color: viewMode==='list' ? 'white' : 'var(--text-secondary)', border:'none', cursor:'pointer', fontSize:14, transition:'all 0.15s'}}
-            title="List view"
-          >☰</button>
-          <button
-            onClick={() => setViewMode('kanban')}
-            style={{padding:'7px 12px', background: viewMode==='kanban' ? 'var(--text-primary)' : 'var(--surface)', color: viewMode==='kanban' ? 'white' : 'var(--text-secondary)', border:'none', cursor:'pointer', fontSize:14, transition:'all 0.15s', borderLeft:'1px solid var(--border)'}}
-            title="Kanban view"
-          >⊞</button>
+          <button onClick={() => setViewMode('list')} style={{padding:'7px 12px', background: viewMode==='list' ? 'var(--text-primary)' : 'var(--surface)', color: viewMode==='list' ? 'white' : 'var(--text-secondary)', border:'none', cursor:'pointer', fontSize:14, transition:'all 0.15s'}} title="List view">☰</button>
+          <button onClick={() => setViewMode('kanban')} style={{padding:'7px 12px', background: viewMode==='kanban' ? 'var(--text-primary)' : 'var(--surface)', color: viewMode==='kanban' ? 'white' : 'var(--text-secondary)', border:'none', cursor:'pointer', fontSize:14, transition:'all 0.15s', borderLeft:'1px solid var(--border)'}} title="Kanban view">⊞</button>
         </div>
       </div>
 
@@ -107,27 +107,18 @@ export default function ReceiptsPage() {
       ) : receipts.length === 0 ? (
         <div className="empty-state"><div className="empty-icon">↓</div><p>No receipts found.</p></div>
       ) : viewMode === 'list' ? (
-        /* ── LIST VIEW ── */
         <div className="card" style={{padding:0}}>
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Reference</th>
-                  <th>From</th>
-                  <th>To</th>
-                  <th>Contact</th>
-                  <th>Scheduled Date</th>
-                  <th>Status</th>
-                  <th></th>
+                  <th>Reference</th><th>From</th><th>To</th><th>Contact</th><th>Scheduled Date</th><th>Status</th><th></th>
                 </tr>
               </thead>
               <tbody>
                 {receipts.map(r => (
                   <tr key={r._id}>
-                    <td>
-                      <span style={{fontFamily:'monospace', fontWeight:700, fontSize:13, color:'var(--accent)'}}>{r.reference}</span>
-                    </td>
+                    <td><span style={{fontFamily:'monospace', fontWeight:700, fontSize:13, color:'var(--accent)'}}>{r.reference}</span></td>
                     <td style={{color:'var(--text-secondary)', fontSize:13}}>
                       <div style={{fontWeight:450}}>{r.supplier}</div>
                       <div style={{fontSize:11.5, color:'var(--text-muted)'}}>Vendor</div>
@@ -147,16 +138,13 @@ export default function ReceiptsPage() {
           </div>
         </div>
       ) : (
-        /* ── KANBAN VIEW ── */
         <div style={{display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:14, alignItems:'start'}}>
           {kanbanGroups.map(group => (
             <div key={group.status}>
-              {/* Column header */}
               <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10, padding:'6px 10px', background: STATUS_BG[group.status], borderRadius:'var(--radius-sm)', border:`1px solid ${STATUS_COLORS[group.status]}22`}}>
                 <span style={{fontSize:12, fontWeight:700, color: STATUS_COLORS[group.status], textTransform:'uppercase', letterSpacing:'0.5px'}}>{group.status}</span>
                 <span style={{fontSize:12, fontWeight:600, color: STATUS_COLORS[group.status], background:'white', borderRadius:99, padding:'1px 7px', border:`1px solid ${STATUS_COLORS[group.status]}44`}}>{group.items.length}</span>
               </div>
-              {/* Cards */}
               <div style={{display:'flex', flexDirection:'column', gap:10}}>
                 {group.items.length === 0 ? (
                   <div style={{textAlign:'center', padding:'20px 10px', color:'var(--text-muted)', fontSize:12, border:'1px dashed var(--border)', borderRadius:'var(--radius-sm)'}}>Empty</div>
@@ -183,7 +171,7 @@ export default function ReceiptsPage() {
         </div>
       )}
 
-      {/* New Receipt Modal */}
+      {/* ── New Receipt Modal ── */}
       {showModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal modal-lg">
@@ -202,19 +190,54 @@ export default function ReceiptsPage() {
                   <input className="form-input" value={form.contact} onChange={e => setForm(p=>({...p,contact:e.target.value}))} placeholder="e.g. Rahul Sharma" />
                 </div>
               </div>
+
               <div className="grid-2">
                 <div className="form-group">
                   <label className="form-label">Destination Warehouse *</label>
-                  <select className="form-input form-select" value={form.warehouse} onChange={e => setForm(p=>({...p,warehouse:e.target.value}))} required>
+                  <select
+                    className="form-input form-select"
+                    value={form.warehouse}
+                    onChange={e => handleWarehouseChange(e.target.value)}
+                    required
+                  >
                     <option value="">Select warehouse</option>
                     {warehouses.map(w => <option key={w._id} value={w._id}>{w.name}</option>)}
                   </select>
                 </div>
+
                 <div className="form-group">
-                  <label className="form-label">Destination Location</label>
-                  <input className="form-input" value={form.location} onChange={e => setForm(p=>({...p,location:e.target.value}))} placeholder="e.g. Rack A" />
+                  <label className="form-label">
+                    Destination Location
+                    {warehouseLocations.length === 0 && form.warehouse && (
+                      <span style={{fontSize:11, color:'var(--text-muted)', fontWeight:400, marginLeft:6}}>(no locations defined)</span>
+                    )}
+                  </label>
+                  {/* ── Dropdown if warehouse has locations, else free text ── */}
+                  {warehouseLocations.length > 0 ? (
+                    <select
+                      className="form-input form-select"
+                      value={form.location}
+                      onChange={e => setForm(p=>({...p, location: e.target.value}))}
+                    >
+                      <option value="">Select location</option>
+                      {warehouseLocations.map(loc => (
+                        <option key={loc._id} value={loc.name}>
+                          {loc.name} ({loc.shortCode})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      className="form-input"
+                      value={form.location}
+                      onChange={e => setForm(p=>({...p,location:e.target.value}))}
+                      placeholder={form.warehouse ? 'Type location name' : 'Select warehouse first'}
+                      disabled={!form.warehouse}
+                    />
+                  )}
                 </div>
               </div>
+
               <div className="form-group">
                 <label className="form-label">Scheduled Date</label>
                 <input className="form-input" type="date" value={form.scheduledDate} onChange={e => setForm(p=>({...p,scheduledDate:e.target.value}))} />

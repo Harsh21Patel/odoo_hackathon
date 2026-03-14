@@ -58,7 +58,6 @@ export default function LoginPage() {
               {loading ? <><span className="spinner" style={{width:16,height:16}}></span> Signing in…</> : 'Sign in →'}
             </button>
           </form>
-          <button className="demo-btn" onClick={fillDemo}>Use demo credentials</button>
           <p className="auth-switch"><Link to="/forgot-password" style={{float:"left"}}>Forgot password?</Link>
           <span>Don't have an account? <Link to="/register">Sign up</Link></span></p>
         </div>
