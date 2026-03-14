@@ -56,7 +56,7 @@ async function seed() {
   });
 
   await Delivery.create({
-    customer: 'Reliance Industries', warehouse: wh1._id, location: 'Rack A',
+    customer: 'Adani Industries', warehouse: wh1._id, location: 'Rack A',
     scheduledDate: new Date(), status: 'Ready',
     lines: [{ product: products[0]._id, demandQty: 50, doneQty: 0, uom: 'kg' }],
     createdBy: admin._id,
